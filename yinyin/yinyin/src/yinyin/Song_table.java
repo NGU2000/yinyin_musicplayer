@@ -1,0 +1,119 @@
+package yinyin;
+
+import javax.swing.JOptionPane;
+import javax.swing.JTable;
+import java.awt.event.*;
+import java.util.Vector;
+/**歌曲表格的响应类----有声明菜单类对象*/
+public class Song_table implements Runnable  {
+	private JTable table;
+	private Songs songs=new Songs();
+	//获取当前用户索引和歌单名
+	private String number;
+	private String playlist_name;
+	//控制播放
+	private MediaPlayer player = new MediaPlayer();
+	public void setTable(JTable table) {
+		this.table=table;
+	}
+	
+	public JTable getTable() {
+		return this.table;
+	}
+	
+	public void setNumber(String number)
+	{
+		this.number=number;
+	}
+	
+	public void setPlaylist_name(String playlist_name) {
+		this.playlist_name=playlist_name;
+	}
+	
+	public void run() {
+		table.addMouseListener(new MouseAdapter() {
+			
+			@Override
+			public void mouseReleased(MouseEvent e) {
+			}
+			
+			@Override
+			public void mousePressed(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+				
+			}
+			
+			@Override
+			public void mouseExited(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				int row1=table.getSelectedRow();
+				System.out.println(row1);
+				int column=table.getSelectedColumn();
+				String t=(String)table.getValueAt(row1, column);
+				
+				if (e.getButton() == MouseEvent.BUTTON3){
+					String songname=(String)table.getValueAt(row1, 0);
+                	Songs_Menu sMenu=new Songs_Menu(table);
+                	sMenu.setPlaylist_name(playlist_name);
+                	sMenu.setNumber(number);
+                	sMenu.setSong_name(songname);
+                	sMenu.showMenu(e.getComponent(), e.getX(), e.getY());
+					}
+				
+				if(column==2)//下载
+				{
+					if(t.equals("0"))
+					{
+						int flag=JOptionPane.showConfirmDialog(null, "是否下载？","提示",JOptionPane.YES_NO_OPTION);
+						if(flag==JOptionPane.YES_OPTION)
+						{
+							//修改数据库
+							String song_name=(String)table.getValueAt(row1, 0);
+							songs.UpdateD_S(number, playlist_name,"download","1",song_name);
+							table.setValueAt(1, row1, column);
+						}
+					}
+					else {
+						JOptionPane.showMessageDialog(null, "已经下载,无法进行其他操作");
+					}
+				}
+				else if (column==3) {
+					if(t.equals("0"))
+					{
+						int flag=JOptionPane.showConfirmDialog(null, "是否分享？","提示",JOptionPane.YES_NO_OPTION);
+						if(flag==JOptionPane.YES_OPTION)
+						{
+							String song_name=(String)table.getValueAt(row1, 0);
+							songs.UpdateD_S(number, playlist_name,"share","1",song_name);
+							table.setValueAt(1, row1, column);
+						}
+					}
+					else {
+						int flag=JOptionPane.showConfirmDialog(null, "是否取消分享？","提示",JOptionPane.YES_NO_OPTION);
+						if(flag==JOptionPane.YES_OPTION)
+						{
+							String song_name=(String)table.getValueAt(row1, 0);
+							songs.UpdateD_S(number, playlist_name,"share","0",song_name);
+							table.setValueAt(0, row1, column);
+						}
+					}
+				}
+				}
+				
+		});
+}
+
+	
+}
+

@@ -1,0 +1,240 @@
+package yinyin;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.EventQueue;
+import java.awt.Rectangle;
+import java.awt.SystemColor;
+import java.util.Vector;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableModel;
+
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.ActionEvent;
+import java.awt.Rectangle;
+/**显示歌单 歌曲并进行相关操作的类*/
+public class Main extends JFrame {
+
+	JPanel contentPane;
+	public FriendDisplay fd;
+	private JPanel FriendPage = new JPanel();
+	private User user = new User();
+	private static int count=0;
+	private JTable table;
+	private JTable table_1;
+	private JTabbedPane tabbedPane;
+	private Vector<JScrollPane> scrollPanes=new Vector<JScrollPane>();
+	Vector<JTable> tables=new Vector<JTable>();
+
+	private PlaylistFunc pl=new PlaylistFunc();
+	private Songs songs=new Songs();
+	//默认本地歌曲目录
+	private String localPath="E:\\JAVA\\RadioPlayer\\music";
+	//登录的用户
+	private static String number="1";
+	public static void setNumber(String number) {
+		number=number;
+	}
+	public static String getNumber()
+	{
+		return number;
+	}
+	
+	public void setTabPane(JTabbedPane tabbedPane)
+	{
+		this.tabbedPane=tabbedPane;
+	}
+	
+	public JTabbedPane getTabpane() {
+		return this.tabbedPane=tabbedPane;
+	}
+	
+	public void setTables(Vector<JTable> tables)
+	{
+		this.tables=tables;
+	}
+	
+	public Vector<JTable> getTables() {
+		return this.tables;
+	}
+	
+	public void setScrollpanes(Vector<JScrollPane> scrollPanes)
+	{
+		this.scrollPanes=scrollPanes;
+	}
+	
+	public Vector<JScrollPane> getScrollpanes() {
+		return this.scrollPanes;
+	}
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					Main frame = new Main(number);
+					frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	/**
+	 * Create the frame.
+	 */
+	public  Main(String number) {
+ {
+	 	setNumber(number);
+	 	System.out.println("现在登录的用户是："+number);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setBounds(100, 100, 599, 420);
+		contentPane = new JPanel();
+		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		setContentPane(contentPane);
+		contentPane.setLayout(null);
+		
+		//读取好友列表到用户类中
+		String db = "audio_friend";
+		String order = "SELECT * FROM f1";
+		Database database=new Database();
+		database.QueryInfo(order, db);
+		user.AddFriend(database.getNumber(), database.getName(),database.getRemark(), "../Image/1.jpg");
+		
+		//将歌单初始化展现
+		Vector<String> v=pl.getAlllist(number);
+		
+		tabbedPane = new JTabbedPane(JTabbedPane.LEFT);
+		tabbedPane.setBounds(10, 34, 553, 285);
+		contentPane.add(tabbedPane);
+		
+		//选项面板响应线程---弹出菜单
+		Tabpane_func tf=new Tabpane_func();
+		tf.setPane(tabbedPane);
+		tf.setNumber(number);
+		Thread tt=new Thread(tf);
+		tt.start();
+		
+		JButton FriendBtn = new JButton();
+		FriendBtn.setBounds(518, 3, 45, 30);
+		FriendBtn.setBackground(Color.WHITE);
+		
+		PicToIcon.ManageImageIcon("FriendIcon.png", FriendBtn);
+		contentPane.add(FriendBtn);
+		JPanel FriendPage = new JPanel();
+		contentPane.add(FriendPage);
+		FriendPage.setVisible(false);
+		FriendBtn.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) 
+			{
+				count++;
+				if(count%2==0)
+				{
+					tabbedPane.setVisible(true);
+					FriendPage.setVisible(false);
+				}
+				else {
+					tabbedPane.setVisible(false);
+					FriendPage.setVisible(true);
+					FriendPage.setBackground(SystemColor.desktop);
+					FriendPage.setBounds(10,34,553,285);
+					FriendPage.setLayout(null);
+					contentPane.add(FriendPage);
+					fd = new FriendDisplay(FriendPage);
+					for (Friend friend : user.GetFriendList()) 
+					{
+						fd.AddAFriend(friend.GetImagePath(), friend.GetName());
+					}
+				}
+				}
+		});
+		
+		
+		JButton btn_add_pl = new JButton("\u65B0\u5EFA\u6B4C\u5355");
+		//新建歌单
+		btn_add_pl.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				//先在数据库加入,在vector中加入
+				pl.AddPlaylist(number, "新增歌单");
+				scrollPanes.add(new JScrollPane());
+				//表格头部要有
+				String[] n= {"歌曲","歌手","下载","收藏","专辑名","时长"};
+				Vector<String> name=new Vector<String>();
+				for(int j=0;j<n.length;j++)
+				{
+					name.add(n[j]);
+				}
+				//内容----数据库读取
+				//声明动态二维
+				Vector<Vector<String>> content=new Vector<Vector<String>>();
+				DefaultTableModel dtm=new DefaultTableModel(content,name);
+				JTable newTable=new JTable(dtm);
+				tables.add(newTable);
+				//给该table绑定监听事件
+				Song_table st=new Song_table();
+				st.setTable(newTable);
+				Thread t=new Thread(st);
+				t.start();
+				int len1,len2;
+				len1=scrollPanes.size()-1;
+				len2=tables.size()-1;
+				scrollPanes.get(len1).setViewportView(tables.get(len2));
+				tabbedPane.addTab(v.get(v.size()-1), null, scrollPanes.get(len1), null);
+			}
+		});
+		btn_add_pl.setBounds(161, 3, 89, 30);
+		contentPane.add(btn_add_pl);
+		
+		//展示歌单中的歌曲
+		for(int i=0;i<v.size();i++)
+		{
+			scrollPanes.add(new JScrollPane());
+			String[] n= {"歌曲","歌手","下载","收藏","专辑名","时长"};
+			Vector<String> name=new Vector<String>();
+			for(int j=0;j<n.length;j++)
+			{
+				name.add(n[j]);
+			}
+			
+			//声明动态二维获取某用户歌单的全部歌曲 
+			Vector<Vector<String>> content=new Vector<Vector<String>>();
+			System.out.println(v.get(i));
+			if(v.get(i).equals("本地歌曲"))
+			{
+				GetSongInfo getSongInfo=new GetSongInfo(localPath);
+				try {
+					content=getSongInfo.returnInfo(localPath);
+				} catch (Exception e) {
+					System.out.println(e.getMessage());
+				}
+			}
+			else {
+				content=songs.getALLsongs(number, v.get(i));
+			}
+			
+			//声明一维
+			Vector<String>temp=new Vector<String>();
+			content.add(temp);
+			DefaultTableModel dtm=new DefaultTableModel(content,name);
+			JTable item=new JTable(dtm);
+			tables.add(item);
+			//给每一个table绑定监听函数
+			Song_table st=new Song_table();
+			st.setNumber(number);
+			st.setPlaylist_name(v.get(i));
+			st.setTable(item);
+			Thread t=new Thread(st);
+			t.start();
+			scrollPanes.get(i).setViewportView(tables.get(i));
+			tabbedPane.addTab(v.get(i), null, scrollPanes.get(i), null);
+		}
+	}
+}
+}

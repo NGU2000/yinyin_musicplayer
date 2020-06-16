@@ -1,0 +1,1016 @@
+package yinyin;
+
+import java.awt.BorderLayout;
+import java.awt.Button;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.WritableRaster;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PushbackInputStream;
+import java.io.Reader;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.Charset;
+import java.security.KeyStore.Entry.Attribute;
+import java.util.Random;
+
+import javax.imageio.ImageIO;
+
+import javax.sound.midi.VoiceStatus;
+import javax.sound.sampled.Clip;
+import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
+import javax.swing.JSlider;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.JTextPane;
+import javax.swing.JViewport;
+import javax.swing.SortingFocusTraversalPolicy;
+import javax.swing.SwingConstants;
+import javax.swing.Timer;
+import javax.swing.GroupLayout.Alignment;
+import javax.swing.event.AncestorEvent;
+import javax.swing.event.AncestorListener;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.text.Highlighter;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyleContext;
+import javax.xml.crypto.Data;
+
+
+import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
+import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
+import org.jaudiotagger.tag.TagException;
+
+
+public class Main {
+	
+	//详细歌曲信息面板
+	private JPanel musicexactInfoJPanel;
+	
+	//开启显示歌词线程
+	private Thread showThread = new Highlight();
+	
+	//歌词面板
+	private JScrollPane lyricJScrollPane;
+	private JTextPane lyricTextPane;
+	
+	//歌曲海报显示
+	private JLabel bigpicJLabel;
+	
+	//左下角显示歌曲信息面板
+	private JPanel musicInfoJPanel;
+	private JLabel picJLabel;//显示图片
+	private JLabel musicnJLabel;//显示歌曲名
+	private JLabel singerJLabel;//显示歌手名
+	
+	//音乐列表
+	private JScrollPane musicJScrollPane;
+	private JTable musicJTable;
+	
+	//默认的音乐存放地址
+	private int num = 0;//记录歌曲数
+	private File[] files;
+	
+	//记录播放的音乐的下标，上一首和目前
+	private int foreindex = -1;
+	private int curindex = -1;
+	
+	//记录时间
+	private int sec = 0;
+	private int min = 0;
+	
+	//时间控件
+	private TimerActioner timerActioner;
+	private Timer timer;
+	//判断是否有音乐在缓存中
+	private boolean HasMusic = false;
+	//记录当前的播放状态
+	private boolean IsPlay = false;
+	//播放按钮
+	private JButton playButton;
+	private JButton nextButton;
+	private JButton foreButton;
+	private JButton backButton;
+	//记录当前的播放模式, 0循环，1顺序，2随机
+	private int Style = 0;
+	GetSongInfo getInfo;
+	//选择播放模式按钮
+	private JButton styleButton;
+	//播放
+	MediaPlayer mediaPlayer = new MediaPlayer();
+	//显示时间
+	private JLabel totaltimeLabel;
+	private JLabel nowtimeLabel;
+	
+	//播放滑块
+	private JSlider playSlider;
+	//音量滑块
+	private JSlider voiceJSlider;
+	
+	//初始化ICON
+	private	ImageIcon pauseIcon;
+	private	ImageIcon playIcon;
+	private	ImageIcon nextIcon;
+	private ImageIcon circleIcon;
+	private ImageIcon foreIcon;
+	private ImageIcon orderIcon;
+	private ImageIcon randomIcon;
+	private ImageIcon createIcon;
+	private ImageIcon friendIcon;
+	private ImageIcon backIcon;
+	
+	//存放歌单信息
+	private Object[][] data;
+	//存放歌词信息
+	private Object[][] lyric;
+	
+	public Main() throws IOException
+	{
+		//初始化时间
+		timerActioner = new TimerActioner();
+		timer = new Timer(1000,timerActioner);
+		totaltimeLabel = new JLabel();
+		nowtimeLabel = new JLabel();
+		totaltimeLabel.setText("0:00");
+		totaltimeLabel.setBounds(796, 557, 56, 10);
+		nowtimeLabel.setText("0:00");
+		nowtimeLabel.setBounds(245, 557, 80, 10);
+		
+		//设置播放滑块
+		playSlider = new JSlider();
+		playSlider.setSnapToTicks(true);
+		playSlider.setValue(0);
+		playSlider.setBounds(330, 557, 450, 10);
+		playSlider.setBackground(new Color(255,255,255));
+		//设置音量滑块
+		voiceJSlider = new JSlider();
+		
+		//修改Icon大小
+		musicJScrollPane = new JScrollPane();
+		musicJScrollPane.setPreferredSize(new Dimension(1000,2000));
+		getInfo = new GetSongInfo();
+		//设置选择播放暂停事件
+		playButton = new JButton("播放");
+		nextButton = new JButton("下一首");
+		styleButton = new JButton("循环");
+		foreButton = new JButton("上一首");
+		backButton = new JButton("返回");
+		//设置按钮
+		playButton.setBorderPainted(false);
+		nextButton.setBorderPainted(false);
+		foreButton.setBorderPainted(false);
+		backButton.setBorderPainted(false);
+		styleButton.setBorderPainted(false);
+		//设置透明
+		playButton.setBackground(Color.white);
+		nextButton.setBackground(Color.white);
+		foreButton.setBackground(Color.white);
+		styleButton.setBackground(Color.white);
+		backButton.setBackground(Color.white);
+		//初始化按钮
+		playButton.setBounds(15, 510, 80, 80);
+		styleButton.setBounds(130, 510, 80, 80);
+		nextButton.setBounds(130,570,80,80);
+		foreButton.setBounds(210,570,30,30);
+		backButton.setBounds(6,20,30,30);
+		//设置按钮ICON
+		BufferedImage playBufferedImage = ImageIO.read(new File("../Image/play.png"));
+		playIcon = changeIcon(playBufferedImage, playButton);
+		BufferedImage pauseBufferedImage =ImageIO.read(new File("../Image/pause.png"));
+		pauseIcon = changeIcon(pauseBufferedImage, playButton);
+		BufferedImage nextBufferedImage =ImageIO.read(new File("../Image/next.png"));
+		nextIcon = changeIcon(nextBufferedImage, nextButton);
+		BufferedImage foreBufferedImage =ImageIO.read(new File("../Image/fore.png"));
+		foreIcon = changeIcon(foreBufferedImage, foreButton);
+		BufferedImage circleBufferedImage =ImageIO.read(new File("../Image/circle.png"));
+		circleIcon = changeIcon(circleBufferedImage, styleButton);
+		BufferedImage orderBufferedImage =ImageIO.read(new File("../Image/order.png"));
+		orderIcon = changeIcon(orderBufferedImage, styleButton);
+		BufferedImage randomBufferedImage =ImageIO.read(new File("../Image/random.png"));
+		randomIcon = changeIcon(randomBufferedImage, styleButton);
+		BufferedImage backBufferedImage =ImageIO.read(new File("../Image/back.png"));
+		backIcon = changeIcon(backBufferedImage, backButton);
+		playButton.setIcon(playIcon);
+		playButton.setHorizontalAlignment(SwingConstants.LEFT);
+		nextButton.setIcon(nextIcon);
+		nextButton.setHorizontalAlignment(SwingConstants.LEFT);
+		styleButton.setIcon(circleIcon);
+		styleButton.setHorizontalAlignment(SwingConstants.LEFT);
+		foreButton.setIcon(foreIcon);
+		backButton.setHorizontalAlignment(SwingConstants.CENTER);
+		backButton.setIcon(backIcon);
+	
+		
+		playButton.setBorderPainted(false);
+		playButton.setBorder(null);
+		playButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		//下一首按钮的ICON
+		//播放按钮事件
+		playButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				//判断是否有音乐在缓存中
+				if(HasMusic)
+				{
+				IsPlay = !IsPlay;
+				if(IsPlay == false)
+				{
+					mediaPlayer.Pause();
+					playButton.setIcon(pauseIcon);
+					timer.stop();
+				}
+				else {
+					mediaPlayer.Play();
+					playButton.setIcon(playIcon);
+					timer.start();
+				}
+				}
+			}
+		});
+		//设置选择播放模式事件
+
+		styleButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				Style++;
+				Style = Style%3;
+				switch (Style) {
+				case 0: {
+					styleButton.setIcon(circleIcon);
+					break;}
+				case 1: {
+					styleButton.setIcon(orderIcon);
+					break;}
+				case 2: {
+					styleButton.setIcon(randomIcon);
+					break;}
+				default:
+					throw new IllegalArgumentException("Unexpected value: " + Style);
+				}
+			}
+		});
+		//上一首事件
+		foreButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				//判断是否有正在播放的歌曲
+				
+				if(HasMusic)
+				{
+					//判断有前一首
+					if(foreindex!=-1)
+					{
+						//开启歌曲线程
+						if(showThread!=null)
+						{
+							showThread.stop();
+							showThread =new Highlight();
+							showThread.start();
+						}
+						else {
+							showThread.start();
+						}
+						//将时间设置为0
+						min = 0;
+						sec = 0;
+						curindex = foreindex;
+						foreindex = -1;
+						musicJTable.setRowSelectionInterval(curindex, curindex);
+						//更改信息
+						try {
+							ShowMusicInfo();
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						} catch (BadLocationException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						mediaPlayer.Play("../music/"+data[curindex][0]+".mp3");
+						playSlider.setMinimum(0);
+						playSlider.setMaximum(Integer.valueOf(data[curindex][4].toString()));
+					}
+					else {
+						JOptionPane.showMessageDialog(null,"当前无前一首歌曲","",JOptionPane.INFORMATION_MESSAGE);
+					}
+				}
+			}
+		});
+		//下一首事件
+		nextButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				//判断是否有正在播放的歌曲
+				if(HasMusic)
+				{
+				//循环播放事件
+				if(Style == 0)
+				{
+					//将时间设置为0
+					min = 0;
+					sec = 0;
+					foreindex  = curindex;
+					//重复播放
+					mediaPlayer.Play("../music/"+String.valueOf(data[curindex][0])+".mp3");
+					//设置高亮
+					musicJTable.setRowSelectionInterval(curindex,curindex);
+				}
+				//顺序播放事件
+				else if(Style == 1)
+				{
+				//将时间设置为0
+				min = 0;
+				sec = 0;
+				
+				//更新歌曲
+				foreindex = curindex;
+				//判断是否是最后一首歌曲
+				if(curindex!=num){
+					curindex ++;
+				}
+				else {
+					curindex = 0;
+				}
+				//设置高亮
+				musicJTable.setRowSelectionInterval(curindex,curindex);
+				//更改信息
+				try {
+					ShowMusicInfo();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (BadLocationException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				//播放
+				mediaPlayer.Play("../music/"+String.valueOf(data[curindex][0])+".mp3");
+				playSlider.setMinimum(0);
+				playSlider.setMaximum(Integer.valueOf(data[curindex][4].toString()));
+				totaltimeLabel.setText(data[curindex][3].toString());
+				}
+				//随机播放
+				else if(Style == 2)
+				{
+					//将时间设置为0
+					min = 0;
+					sec = 0;
+					foreindex = curindex;
+					//随机寻找
+					curindex = (int)(Math.random()*num);
+					//设置高亮
+					musicJTable.setRowSelectionInterval(curindex,curindex);
+					//更改信息
+					try {
+						ShowMusicInfo();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (BadLocationException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					//播放
+					mediaPlayer.Play("../music/"+String.valueOf(data[curindex][0])+".mp3");
+					playSlider.setMinimum(0);
+					playSlider.setMaximum(Integer.valueOf(data[curindex][4].toString()));
+					totaltimeLabel.setText(data[curindex][3].toString());
+				}
+				//开启歌曲线程
+				if(showThread!=null)
+				{
+					showThread.stop();
+					showThread =new Highlight();
+					showThread.start();
+				}
+				else {
+					showThread.start();
+				}
+				}
+			}
+		});
+		//滑块事件
+		playSlider.addAncestorListener(new AncestorListener() {
+			
+			@Override
+			public void ancestorRemoved(AncestorEvent event) {
+				// TODO Auto-generated method stub
+				int now = playSlider.getValue();
+				min = now/60;
+				sec = now%60;
+			}
+			@Override
+			public void ancestorMoved(AncestorEvent event) {
+				// TODO Auto-generated method stub
+				int now = playSlider.getValue();
+				min = now/60;
+				sec = now%60;
+			}
+			
+			@Override
+			public void ancestorAdded(AncestorEvent event) {
+				// TODO Auto-generated method stub
+				int now = playSlider.getValue();
+				min = now/60;
+				sec = now%60;
+			}
+		});
+		//返回事件
+		backButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				musicexactInfoJPanel.setVisible(false);
+				musicJTable.setVisible(true);
+			}
+		});
+	
+		//设置歌曲信息面板相关
+		musicInfoJPanel = new JPanel();
+		musicInfoJPanel.setBounds(18, 381, 209, 125);
+		//初始化面板中的控件
+		musicnJLabel = new JLabel();
+		picJLabel = new JLabel();
+		singerJLabel = new JLabel();
+		musicnJLabel.setBounds(112, 71, 91, 28);
+		picJLabel.setBounds(19, 19, 81, 80);
+		singerJLabel.setBounds(112, 23, 109, 36);
+		//添加到面板中
+		musicInfoJPanel.add(picJLabel);
+		musicInfoJPanel.add(musicnJLabel);
+		musicInfoJPanel.add(singerJLabel);
+		musicInfoJPanel.setLayout(null);
+		musicInfoJPanel.setVisible(true);
+		musicInfoJPanel.setBackground(new Color(255,255,255));
+		musicInfoJPanel.setBorder(BorderFactory.createLineBorder(Color.lightGray));
+		//音乐详细面板
+		musicexactInfoJPanel = new JPanel();
+		bigpicJLabel = new JLabel();
+		lyricJScrollPane = new JScrollPane();
+		lyricTextPane = new JTextPane();
+		//初始化音乐歌词数组
+		lyric = new Object[200][2];
+		//设置位置
+		musicexactInfoJPanel.setBounds(6, 6, 892, 500);
+		musicexactInfoJPanel.setLayout(null);
+		bigpicJLabel.setBounds(61, 143, 205, 204);
+		lyricJScrollPane.setBounds(370, 25, 479, 462);
+		lyricJScrollPane.setBackground(new Color(255,255,255));
+		lyricTextPane.setBounds(370, 25, 479, 462);
+		lyricJScrollPane.getViewport().add(lyricTextPane);
+		musicexactInfoJPanel.add(bigpicJLabel);
+		musicexactInfoJPanel.add(lyricJScrollPane);
+		musicexactInfoJPanel.add(backButton);
+		musicexactInfoJPanel.setVisible(false);
+		musicexactInfoJPanel.setBackground(new Color(255,255,255));
+		//添加响应函数
+		musicInfoJPanel.addMouseListener(new MouseListener() {
+			
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void mousePressed(MouseEvent e) {
+				// TODO Auto-generated method stub
+				musicexactInfoJPanel.setVisible(true);
+				musicJTable.setVisible(false);
+			}
+			
+			@Override
+			public void mouseExited(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				// TODO Auto-generated method stub
+			
+			}
+		});
+	}
+	public ImageIcon changeIcon(BufferedImage image,JButton jButton) {
+		BufferedImage tempBufferedImage = resizeBufferedImage(image, jButton.getWidth(), jButton.getHeight(), true);
+		ImageIcon imageIcon = new ImageIcon(tempBufferedImage);
+		return imageIcon;
+	}	
+	public void ShowMusicInfo() throws IOException, BadLocationException
+	{
+		//设置音乐小信息
+		//设置文本标签
+		musicnJLabel.setText(String.valueOf(data[curindex][0]));
+		singerJLabel.setText(String.valueOf(data[curindex][1]));
+		//缩放图片
+		BufferedImage tempBufferedImage  = ImageIO.read(new File("../post/"+String.valueOf(data[curindex][0])+".jpg"));
+	
+		//设置大界面信息
+		tempBufferedImage = resizeBufferedImage(tempBufferedImage,picJLabel.getWidth(),picJLabel.getHeight(), true);
+		ImageIcon imageIcon = new ImageIcon(tempBufferedImage);
+		picJLabel.setIcon(imageIcon);
+		//设置图片
+		tempBufferedImage  = ImageIO.read(new File("../post/"+String.valueOf(data[curindex][0])+".jpg"));
+		tempBufferedImage = resizeBufferedImage(tempBufferedImage,bigpicJLabel.getWidth(),bigpicJLabel.getHeight(),true);
+		imageIcon = new ImageIcon(tempBufferedImage);
+		bigpicJLabel.setIcon(imageIcon);
+		//获取歌词
+		getLyric("../lyrics/"+data[curindex][0]+".lrc");
+		showLyric();
+	}
+	//获取歌词函数
+	public void getLyric(String filename) throws IOException {
+		//清空数组
+		this.lyric = new Object[100][2];
+		BufferedReader bufferedReader = new BufferedReader(new UnicodeReader(new FileInputStream(filename),Charset.defaultCharset().name()));
+		String lineString = "";
+		int index = 0;
+		while((lineString = bufferedReader.readLine())!=null)
+		{
+			String[] timeLyric = lineString.split("]");
+			//将lrc文件分为时间信息和歌词信息
+			timeLyric[0] = timeLyric[0].replace("[", "");
+			timeLyric[0] = timeLyric[0].replaceAll("[?]", "");
+			String[] times = timeLyric[0].split(":");
+			
+			int min = Integer.valueOf(times[0]);
+			double sec = Double.valueOf(times[1]);
+			int sec_i = (int)sec;
+			int totaltime = min*60+sec_i;
+			this.lyric[index][0] = totaltime;
+			if(timeLyric.length!=1)
+			{	
+			this.lyric[index][1] = timeLyric[1];
+			}
+			else {
+				this.lyric[index][1] = "";
+			}
+			index++;
+		}
+		bufferedReader.close();
+		
+	}
+
+	//歌词显示函数
+	public void showLyric() throws BadLocationException {
+		int index = 0;
+		String tempString = "";
+		//导入歌词
+		while(lyric[index][0]!=null)
+		{
+			tempString+=lyric[index][1]+"\n\n";
+			index++;
+		}
+		lyricTextPane.setText(tempString);
+	}
+
+	//缩放函数
+	public BufferedImage resizeBufferedImage(BufferedImage source, int targetW, int targetH, boolean flag) {
+		int type = source.getType();
+		BufferedImage target = null;
+		double sx = (double) targetW / source.getWidth();
+		double sy = (double) targetH / source.getHeight();
+		if (flag && sx > sy) {
+			sx = sy;
+			targetW = (int) (sx * source.getWidth());
+		} else if(flag && sx <= sy){
+			sy = sx;
+			targetH = (int) (sy * source.getHeight());
+		}
+		if (type == BufferedImage.TYPE_CUSTOM) { // handmade
+			ColorModel cm = source.getColorModel();
+			WritableRaster raster = cm.createCompatibleWritableRaster(targetW, targetH);
+			boolean alphaPremultiplied = cm.isAlphaPremultiplied();
+			target = new BufferedImage(cm, raster, alphaPremultiplied, null);
+		} else {
+			target = new BufferedImage(targetW, targetH, type);
+		}
+		Graphics2D g = target.createGraphics();
+		g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+		g.drawRenderedImage(source, AffineTransform.getScaleInstance(sx, sy));
+		g.dispose();
+		return target;
+	}
+	//显示歌单信息
+	public void showInfor() throws IOException, TagException, ReadOnlyFileException, InvalidAudioFrameException
+	{
+		String[] head = {"歌曲名","歌手名","专辑名","时长"};
+		data = new Object[100][5];
+		File file= new File("../music/");
+		//遍历文件夹
+		files = file.listFiles();
+		for(File f:files)
+		{
+			getInfo.GetInformation(f);
+			data[num][0] = getInfo.getTitle();
+			data[num][1] = getInfo.getArtist();
+			data[num][2] = getInfo.getAlbum();
+			data[num][3] = getInfo.getTime();
+			data[num][4] = getInfo.getLength();
+			f.renameTo(new File("../music/"+data[num][0]+".mp3"));
+			num++;
+		}
+		Object[][] data1 = new Object[num][5];
+		for(int i =0 ;i<num;i++)
+		{
+			data1[i][0] = data[i][0];
+			data1[i][1] = data[i][1];
+			data1[i][2] = data[i][2];
+			data1[i][3] = data[i][3];
+			data1[i][4] = data[i][4];
+		}
+		musicJTable = new JTable(data1,head)
+		//防止编辑
+			{
+			public boolean isCellEditable(int row, int column)
+			{
+				return false;
+			}
+			};
+		musicJTable.setFont(new Font(null,Font.TYPE1_FONT,14));
+		musicJTable.getColumnModel().getColumn(0).setPreferredWidth(150);
+		musicJTable.setForeground(Color.PINK);
+		musicJTable.setBackground(Color.GRAY);
+		musicJScrollPane.getViewport().add(musicJTable.getTableHeader());
+		musicJScrollPane.getViewport().add(musicJTable);
+		musicJScrollPane.setVisible(true);
+	}
+    //初始化
+	public void init()
+	{
+		musicJTable.addMouseListener(new MouseAdapter() {
+			public void mouseClicked(MouseEvent e)
+			{
+				sec = 0;
+				min = 0;
+				//行索引
+				int r = musicJTable.getSelectedRow();
+				//列索引
+				int c = musicJTable.getSelectedColumn();
+				if(c == 0)
+				{
+				//获得选中的单元格值
+				Object value = musicJTable.getValueAt(r, c);
+				mediaPlayer.Play("../music/"+value+".mp3");
+				//修改当前歌曲下标
+				curindex = r;
+				//修改值
+				IsPlay = true;
+				//修改播放按钮
+				playButton.setIcon(playIcon);
+				//修改音乐情况
+				HasMusic = true;
+				//修改音乐信息
+				try {
+					ShowMusicInfo();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (BadLocationException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				playSlider.setMinimum(0);
+				playSlider.setMaximum(Integer.parseInt(String.valueOf(data[r][4])));
+				//修改label
+				totaltimeLabel.setText(String.valueOf(data[r][3]));
+				nowtimeLabel.setText("0:00");
+				//开启计时功能
+				timer.start();
+				//开启歌曲线程
+				if(showThread!=null)
+				{
+					showThread.stop();
+					showThread =new Highlight();
+					showThread.start();
+				}
+				else {
+					showThread.start();
+				}
+				}
+			}
+		});
+	}
+	//获取元件
+	public JScrollPane GetPlayListPanel()
+	{
+		return musicJScrollPane;
+	}
+	public JButton GetPlayButton() {
+		return playButton;
+	}
+	public JButton GetStyleButton() {
+		return styleButton;
+	}
+	public JButton GetNextButton()
+	{
+		return nextButton;
+	}
+	public JButton GetForeButton() {
+		return foreButton;
+	}
+	public JLabel GetNowTimeLabel() {
+		return nowtimeLabel;
+	}
+	public JLabel GetTotalTimeLabel() {
+		return totaltimeLabel;
+	}
+	public JSlider GetPlaySlider()
+	{
+		return playSlider;
+	}
+	public JSlider GetVoiceSlider() {
+		return voiceJSlider;
+	}
+	public JPanel GetMusicInfoPanel()
+	{
+		return musicInfoJPanel;
+	}
+	public JPanel GetMusicexactJPanel()
+	{
+		return musicexactInfoJPanel;
+	}
+
+	public JButton GetBackButton()
+	{
+		return backButton;
+	}
+	//继承
+	public class Highlight extends Thread
+	{
+		public void run()
+		{
+			int index = 0;
+			int start = 0;
+			int end = 0;
+			JScrollBar jScrollBar = lyricJScrollPane.getVerticalScrollBar();
+			while (lyric[index][0]!=null) {
+				if(Integer.parseInt(lyric[index][0].toString())<=(60*min+sec))
+				{
+					jScrollBar.setValue(index*35);
+					Document document = lyricTextPane.getDocument();
+					StyleContext sc = StyleContext.getDefaultStyleContext();
+					AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, Color.BLUE);
+					String strtemp;
+					end = String.valueOf(lyric[index][1]).length();
+					end = start+end;
+					try {
+						strtemp = document.getText(start, end-start);
+						document.remove(start,end-start );
+						document.insertString(start, strtemp, aset);
+					} catch (BadLocationException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					start = end+2;
+					index ++;
+				}
+				try {
+					sleep(500);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	public class TimerActioner implements ActionListener{
+		public void actionPerformed(ActionEvent e)
+		{
+			//添加下一首事件
+			if((sec+min*60)!= Integer.parseInt(data[curindex][4].toString()))
+			{
+				sec++;
+			}
+			else {
+				//清零
+				min = 0;
+				sec = 0;
+				//判断当前的播放模式
+				//循环播放事件
+				if(Style == 0)
+				{
+					//将时间设置为0
+					min = 0;
+					sec = 0;
+					foreindex  = curindex;
+					//重复播放
+					mediaPlayer.Play("../music/"+String.valueOf(data[curindex][0])+".mp3");
+					//设置高亮
+					musicJTable.setRowSelectionInterval(curindex,curindex);
+				}
+				//顺序播放事件
+				else if(Style == 1)
+				{
+				//将时间设置为0
+				min = 0;
+				sec = 0;
+				
+				//更新歌曲
+				foreindex = curindex;
+				//判断是否是最后一首歌曲
+				if(curindex!=num){
+					curindex ++;
+				}
+				else {
+					curindex = 0;
+				}
+				//设置高亮
+				musicJTable.setRowSelectionInterval(curindex,curindex);
+				playSlider.setMinimum(0);
+				playSlider.setMaximum(Integer.valueOf(data[curindex][4].toString()));
+				//更改信息
+				try {
+					ShowMusicInfo();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (BadLocationException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				//播放
+				mediaPlayer.Play("../music/"+String.valueOf(data[curindex][0])+".mp3");
+				playSlider.setMinimum(0);
+				playSlider.setMaximum(Integer.valueOf(data[curindex][4].toString()));
+				totaltimeLabel.setText(data[curindex][3].toString());
+				}
+				//随机播放
+				else if(Style == 2)
+				{
+					//将时间设置为0
+					min = 0;
+					sec = 0;
+					foreindex = curindex;
+					//随机寻找
+					curindex = (int)(Math.random()*num);
+					//设置高亮
+					musicJTable.setRowSelectionInterval(curindex,curindex);
+					//更改信息
+					try {
+						ShowMusicInfo();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (BadLocationException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					//播放
+					mediaPlayer.Play("../music/"+String.valueOf(data[curindex][0])+".mp3");
+					playSlider.setMinimum(0);
+					playSlider.setMaximum(Integer.valueOf(data[curindex][4].toString()));
+					totaltimeLabel.setText(data[curindex][3].toString());
+				}
+				//开启歌曲线程
+				if(showThread!=null)
+				{
+					showThread.stop();
+					showThread =new Highlight();
+					showThread.start();
+				}
+				else {
+					showThread.start();
+				}
+				}
+			
+			while(sec>60) {
+				min++;
+				sec -= 60;
+			}
+			//progressBar.setValue(min*60 +sec);
+			//重开线程
+			
+			nowtimeLabel.setText(String.valueOf(min)+":"+String.valueOf(sec));
+			playSlider.setValue(min*60+sec);
+		}
+	}
+
+public class UnicodeReader extends Reader {
+
+
+  PushbackInputStream internalIn;
+  InputStreamReader   internalIn2 = null;
+  String              defaultEnc;
+ 
+  private static final int BOM_SIZE = 4;
+ 
+  
+  UnicodeReader(InputStream in, String defaultEnc) {
+     internalIn = new PushbackInputStream(in, BOM_SIZE);
+     this.defaultEnc = defaultEnc;
+  }
+ 
+  public String getDefaultEncoding() {
+     return defaultEnc;
+  }
+ 
+  
+  public String getEncoding() {
+     if (internalIn2 == null) return null;
+     return internalIn2.getEncoding();
+  }
+ 
+  
+  protected void init() throws IOException {
+     if (internalIn2 != null) return;
+ 
+     String encoding;
+     byte bom[] = new byte[BOM_SIZE];
+     int n, unread;
+     n = internalIn.read(bom, 0, bom.length);
+ 
+     if ( (bom[0] == (byte)0x00) && (bom[1] == (byte)0x00) &&
+                 (bom[2] == (byte)0xFE) && (bom[3] == (byte)0xFF) ) {
+        encoding = "UTF-32BE";
+        unread = n - 4;
+     } else if ( (bom[0] == (byte)0xFF) && (bom[1] == (byte)0xFE) &&
+                 (bom[2] == (byte)0x00) && (bom[3] == (byte)0x00) ) {
+        encoding = "UTF-32LE";
+        unread = n - 4;
+     } else if (  (bom[0] == (byte)0xEF) && (bom[1] == (byte)0xBB) &&
+           (bom[2] == (byte)0xBF) ) {
+        encoding = "UTF-8";
+        unread = n - 3;
+     } else if ( (bom[0] == (byte)0xFE) && (bom[1] == (byte)0xFF) ) {
+        encoding = "UTF-16BE";
+        unread = n - 2;
+     } else if ( (bom[0] == (byte)0xFF) && (bom[1] == (byte)0xFE) ) {
+        encoding = "UTF-16LE";
+        unread = n - 2;
+     } else {
+        // Unicode BOM mark not found, unread all bytes
+        encoding = defaultEnc;
+        unread = n;
+     }    
+     //System.out.println("read=" + n + ", unread=" + unread);
+ 
+     if (unread > 0) internalIn.unread(bom, (n - unread), unread);
+ 
+     // Use given encoding
+     if (encoding == null) {
+        internalIn2 = new InputStreamReader(internalIn);
+     } else {
+        internalIn2 = new InputStreamReader(internalIn, encoding);
+     }
+  }
+ 
+  public void close() throws IOException {
+     init();
+     internalIn2.close();
+  }
+ 
+  public int read(char[] cbuf, int off, int len) throws IOException {
+     init();
+     return internalIn2.read(cbuf, off, len);
+  }
+}
+
+}
+

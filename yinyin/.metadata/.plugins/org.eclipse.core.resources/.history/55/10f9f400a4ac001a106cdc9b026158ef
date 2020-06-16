@@ -1,0 +1,128 @@
+package yinyin;
+
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.ScrollPane;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+
+public class FriendDisplay 
+{
+	// 底层panel
+	JPanel friendPage1;
+	// 底层pane
+	ScrollPane scrollPane;
+	// 第二层panel
+	JPanel friendPage2;
+		
+	// 传入的参数为主界面的panel 好友界面将会嵌在里面
+	FriendDisplay(JPanel mPanel)
+	{
+		// 创建对象
+		friendPage1 = new JPanel();
+		scrollPane = new ScrollPane();
+		friendPage2 = new JPanel();
+		
+		// 逐层添加
+		friendPage1.setBounds(0,0,1080,670);
+		friendPage1.setLayout(null);
+		mPanel.add(friendPage1);
+		
+		scrollPane.setForeground(Color.WHITE);
+		scrollPane.setBounds(15,15,200,600);
+		friendPage1.add(scrollPane);
+		
+		BoxLayout bl = new BoxLayout(friendPage2, BoxLayout.Y_AXIS);
+		friendPage2.setLayout(bl);
+		friendPage2.setBounds(15,15,200,600);
+		scrollPane.add(friendPage2);
+	}
+		
+	/** 往好友列表里添加一名好友 提供头像和用户名 测试函数先用头像的路径*/
+		public void AddAFriend(String imgPath, String name)
+		{		
+			FriendComponent fc = new FriendComponent(friendPage2);
+			fc.SetImgButton(imgPath);
+			fc.SetNameLabel(name);
+		}
+}
+
+/** 好友列表面板（在左侧） */
+class FriendComponent
+{
+	// 外层label
+	JLabel label;
+	// 外层panel
+	JPanel panel;
+	// 头像
+	JButton imgButton;
+	// 用户名
+	JLabel nameLabel;
+
+	FriendComponent(JPanel mPanel)
+	{
+		// 初始化
+		label = new JLabel();
+		panel = new JPanel();
+		imgButton = new JButton();
+		nameLabel = new JLabel();
+		
+		// label设置
+		label.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+		
+		// panel设置
+		panel.setLayout(null);
+		panel.addMouseListener(new MouseAdapter() 
+		{
+			public void mouseEntered(MouseEvent e) 
+			{
+				EnterChangeColor();
+			}
+			
+			public void mouseExited(MouseEvent e)
+			{
+				ExitChangeColor();
+			}
+		});
+		
+		// 设置位置
+		label.setMaximumSize(new Dimension(185,60));
+		panel.setBounds(0,0,185,60);
+		
+		imgButton.setLocation(0, 10);
+		imgButton.setSize(50, 40);
+		
+		nameLabel.setLocation(60, 0);
+		nameLabel.setSize(115,50);
+	
+		// 添加控件
+		label.add(panel);
+		panel.add(imgButton);
+		panel.add(nameLabel);
+		mPanel.add(label);
+		}
+		
+		public void SetImgButton(String imgPath) 
+		{
+			PicToIcon.ManageImageIcon(imgPath,this.imgButton);
+		}
+		public void SetNameLabel(String name)
+		{
+			this.nameLabel.setText(name);
+		}
+		private void EnterChangeColor()
+		{
+			panel.setBackground(new Color(222,222,222));
+		}
+		private void ExitChangeColor() 
+		{
+			panel.setBackground(null);
+		}
+}
